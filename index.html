@@ -63,8 +63,17 @@
       </ul>
       <div>
         <a class="btn" href="https://drive.google.com/drive/folders/1JFlieYR04sOKKKC2ll9IojRX-iEPzmQ7?usp=drive_link" target="_blank">📁 Accéder au Drive</a>
-        <a class="btn" href="line://" target="_blank">📱 Ouvrir LINE</a>
-          <button class="btn" onclick="window.open('https://meet.jit.si/fdm-thailande-bureau', '_blank')">📹 Réunion Jitsi</button>
+
+        <button class="btn" id="openLineBtn"
+                data-url="https://line.me/R/ti/g/657K6-ufX8">📱 Ouvrir LINE</button>
+
+        <button class="btn" id="openLineWebBtn"
+                data-url="https://line.me/R/ti/g/657K6-ufX8"
+                style="background: linear-gradient(45deg,#607D8B,#455A64);">
+          🌐 LINE (version Web)
+        </button>
+
+        <button class="btn" onclick="window.open('https://meet.jit.si/fdm-thailande-bureau', '_blank')">📹 Réunion Jitsi</button>
         <button class="btn" id="addEventBtn" style="background: linear-gradient(45deg, #4CAF50, #388E3C);">➕ Ajouter un événement</button>
       </div>
       <div class="agenda">
@@ -140,7 +149,9 @@
           prenom,
           nom,
           entree: new Date().toLocaleString(),
-          entreeTS: new Date().toISOString()
+          entreeTS: new Date().toISOString(),
+          // ✅ timestamp numérique triable (Bangkok pas nécessaire ici, on affiche plus tard)
+          entreeMillis: Date.now()
         });
       } catch (err) {
         console.error("Erreur ajout login:", err);
@@ -154,35 +165,60 @@
     };
 
     // --- Historique ---
+    // ✅ un seul listener à la fois
+    let unsubscribeLogins = null;
+
     window.ouvrirLog = function() {
       const list = document.getElementById("connectionList");
       list.innerHTML = "";
 
-      const q = query(collection(db, "logins"), orderBy("entreeTS", "desc"));
+      // coupe l'ancien listener si existant
+      if (unsubscribeLogins) { unsubscribeLogins(); unsubscribeLogins = null; }
 
-      onSnapshot(q, (snapshot) => {
+      // Tri par timestamp numérique (documents sans ce champ seront listés mais triés avant)
+      const qLogs = query(collection(db, "logins"), orderBy("entreeMillis", "desc"));
+
+      unsubscribeLogins = onSnapshot(qLogs, (snapshot) => {
         list.innerHTML = "";
-        const stats = {};
+        const stats = {}; // { key: { lastMillis, lastDisplay } }
+
         snapshot.forEach(docSnap => {
           const log = docSnap.data();
           const key = `${(log.prenom||'').toLowerCase()} ${(log.nom||'').toLowerCase()}`;
-          if (!stats[key]) stats[key] = { count: 0, last: "" };
-          stats[key].count++;
-          stats[key].last = log.entree || log.entreeTS || "";
+          if (!stats[key]) stats[key] = { lastMillis: -1, lastDisplay: "" };
+
+          // Choisit le meilleur temps dispo
+          const m =
+            (typeof log.entreeMillis === "number" && log.entreeMillis) ||
+            (log.entreeTS ? Date.parse(log.entreeTS) : 0) ||
+            0;
+
+          if (m > stats[key].lastMillis) {
+            stats[key].lastMillis = m;
+            const d = new Date(m || Date.now());
+            stats[key].lastDisplay = d.toLocaleString('fr-FR', { timeZone: 'Asia/Bangkok' });
+          }
         });
 
-        for (const [person, info] of Object.entries(stats)) {
-          const displayName = person.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        // Rendu (sans compteur)
+        Object.entries(stats).forEach(([person, info]) => {
+          const displayName = person.split(' ')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+            .join(' ');
+
           const li = document.createElement("li");
-          li.textContent = `${displayName} – Connexions : ${info.count} – Dernière : ${info.last}`;
+          li.textContent = `${displayName} – Dernière connexion : ${info.lastDisplay}`;
           list.appendChild(li);
-        }
+        });
       });
 
       document.getElementById("connectionLogModal").style.display = "flex";
     };
 
-    window.fermerLog = () => document.getElementById("connectionLogModal").style.display = "none";
+    window.fermerLog = () => {
+      document.getElementById("connectionLogModal").style.display = "none";
+      if (unsubscribeLogins) { unsubscribeLogins(); unsubscribeLogins = null; }
+    };
 
     // --- FullCalendar ---
     let calendar;
@@ -236,10 +272,8 @@
 
       try {
         if (selectedEvent && selectedEvent.id) {
-          // ✅ mise à jour d'un événement existant
           await updateDoc(doc(db, "events", selectedEvent.id), { title, date });
         } else {
-          // ✅ ajout d'un nouvel événement
           await addDoc(collection(db, "events"), { title, date });
         }
       } catch (err) {
@@ -262,8 +296,69 @@
         alert("Sélectionnez un événement existant à supprimer.");
       }
     });
+
+    // ===== LINE OPEN (Android / iOS / Desktop) avec groupe FDM =====
+    const LINE_GROUP_CODE = "657K6-ufX8";
+    const LINE_SCHEME_GROUP = `line://ti/g/${LINE_GROUP_CODE}`;
+    const LINE_WEB_GROUP    = `https://line.me/R/ti/g/${LINE_GROUP_CODE}`;
+    const PLAY_STORE        = "https://play.google.com/store/apps/details?id=jp.naver.line.android";
+    const APP_STORE         = "https://apps.apple.com/app/line/id443904275";
+
+    function isInAppBrowser() {
+      const ua = navigator.userAgent || "";
+      return /(FBAN|FBAV|Instagram|Twitter|TikTok|GSA|Gmail|Outlook|wv)/i.test(ua)
+             || (/\bVersion\/\d+\.\d+ Mobile Safari\/\d+/.test(ua) && /; wv\)/i.test(ua));
+    }
+
+    function openLine() {
+      const ua = navigator.userAgent || "";
+      const isAndroid = /Android/i.test(ua);
+      const isIOS     = /iPhone|iPad|iPod/i.test(ua);
+      const isDesktop = !isAndroid && !isIOS;
+
+      if (isInAppBrowser()) {
+        window.open(LINE_WEB_GROUP, "_blank", "noopener");
+        return;
+      }
+
+      if (isAndroid) {
+        const intentUrl =
+          `intent://ti/g/${LINE_GROUP_CODE}` +
+          `#Intent;scheme=line;package=jp.naver.line.android;` +
+          `S.browser_fallback_url=${encodeURIComponent(PLAY_STORE)};end`;
+        window.location.href = intentUrl;
+
+        setTimeout(() => {
+          window.location.href = LINE_WEB_GROUP;
+        }, 1500);
+
+      } else if (isIOS) {
+        const t0 = Date.now();
+        window.location.href = LINE_SCHEME_GROUP;
+        setTimeout(() => {
+          const elapsed = Date.now() - t0;
+          if (elapsed < 1600) {
+            window.location.href = APP_STORE;
+          }
+        }, 1200);
+
+      } else if (isDesktop) {
+        const t0 = Date.now();
+        window.location.assign(LINE_SCHEME_GROUP);
+        setTimeout(() => {
+          const elapsed = Date.now() - t0;
+          if (elapsed < 1600) {
+            window.open(LINE_WEB_GROUP, "_blank", "noopener");
+          }
+        }, 1200);
+      }
+    }
+
+    const btnApp = document.getElementById("openLineBtn");
+    const btnWeb = document.getElementById("openLineWebBtn");
+    btnApp?.addEventListener("click", openLine);
+    btnWeb?.addEventListener("click", () => window.open(LINE_WEB_GROUP, "_blank", "noopener"));
+
   </script>
 </body>
 </html>
-
-
