@@ -18,21 +18,37 @@
     footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #AE1F27; color: white; padding: 18px 0; font-size: 1em; text-align: center; box-shadow: 0 -4px 8px rgba(0,0,0,0.15); }
     footer a { color: #ffe6e6; text-decoration: underline; transition: color 0.3s ease; }
     footer a:hover { color: #fff; }
-    #eventModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
-    #eventModal.active { display: flex; }
-    #modalContent { background: #fff; padding: 20px 30px; border-radius: 10px; max-width: 400px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.25); text-align: left; }
-    #modalContent input[type="text"], #modalContent input[type="date"] { width: 100%; padding: 8px 10px; margin-top: 6px; border-radius: 5px; border: 1px solid #ccc; }
-    #modalButtons { margin-top: 20px; text-align: right; }
-    #modalButtons button { margin-left: 10px; padding: 8px 15px; font-size: 1em; border-radius: 5px; border: none; cursor: pointer; }
+
+    /* Modales */
+    #eventModal, #adminModal { display: none; position: fixed; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); justify-content: center; align-items: center; }
+    #eventModal.active, #adminModal.active { display: flex; }
+    #modalContent, .modalContent { background: #fff; padding: 20px 30px; border-radius: 10px; max-width: 400px; width: 90%; box-shadow: 0 4px 12px rgba(0,0,0,0.25); text-align: left; }
+    #modalContent input[type="text"], #modalContent input[type="date"],
+    .modalContent input[type="text"], .modalContent input[type="password"] { width: 100%; padding: 8px 10px; margin-top: 6px; border-radius: 5px; border: 1px solid #ccc; }
+    #modalButtons, .modalButtons { margin-top: 20px; text-align: right; }
+    #modalButtons button, .modalButtons button { margin-left: 10px; padding: 8px 15px; font-size: 1em; border-radius: 5px; border: none; cursor: pointer; }
     #saveBtn { background-color: #AE1F27; color: white; }
-    #cancelBtn { background-color: #ccc; }
+    #cancelBtn, .cancelBtn { background-color: #ccc; }
     #deleteBtn { background-color: #f44336; color: white; float: left; }
+
+    /* Login */
     #loginPage { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #faf5f3, #f5f0e6 60%, #d6c4aa); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2000; }
     #loginBox { background: #fff0f0; padding: 30px 40px; border-radius: 12px; box-shadow: 2px 4px 15px rgba(174,31,39,0.2); text-align: center; }
     #loginBox input { margin: 10px 0; padding: 12px; width: 100%; border: 1px solid #ccc; border-radius: 8px; font-size: 1em; }
-    #loginBox button { margin-top: 15px; padding: 12px 30px; background: linear-gradient(45deg, #AE1F27, #f44336); color: #fff; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; box-shadow: 0 4px 8px rgba(174,31,39,0.4); }
+    #loginBox .btn-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top: 6px; }
+
+    /* Historique */
     #connectionLogModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center; }
-    #connectionLogContent { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; width: 90%; text-align: left; }
+    #connectionLogContent { background: #fff; padding: 20px; border-radius: 10px; max-width: 650px; width: 94%; text-align: left; }
+    #connectionList { list-style: none; padding-left: 0; }
+    #connectionList li { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:6px 0; border-bottom: 1px dashed #eee; }
+    .smallBtn { padding: 6px 10px; font-size: 0.85em; border-radius: 6px; border: none; cursor: pointer; }
+    .danger { background:#f44336; color:#fff; }
+    .ghost  { background:#ececec; color:#333; }
+
+    /* Admin UI */
+    .admin-only { display: none; }
+    .adminBadge { display:inline-block; margin-left:8px; padding:2px 8px; background:#4CAF50; color:#fff; border-radius:999px; font-size:0.8em; vertical-align:middle; }
   </style>
 </head>
 <body>
@@ -44,14 +60,20 @@
       <p>Merci d’entrer vos informations pour accéder au site</p>
       <input type="text" id="prenom" placeholder="Prénom" />
       <input type="text" id="nom" placeholder="Nom" />
-      <button onclick="entrer()">Entrer</button>
+      <div class="btn-row">
+        <button class="btn" onclick="entrer()">Entrer</button>
+        <button class="btn" style="background:linear-gradient(45deg,#455A64,#263238)" onclick="ouvrirAdmin()">Admin</button>
+      </div>
     </div>
   </div>
 
   <!-- Contenu principal -->
   <div id="mainContent" style="display:none;">
     <img class="logo" src="logo.png" alt="Logo FDM ADFE Thaïlande" />
-    <h2>Pour une communauté française solidaire, créative et durable en Thaïlande</h2>
+    <h2>
+      Pour une communauté française solidaire, créative et durable en Thaïlande
+      <span id="adminBadge" class="adminBadge" style="display:none;">Admin</span>
+    </h2>
     <section class="content">
       <h3>Qui sommes-nous ?</h3>
       <p>Français du Monde – ADFE Thaïlande est une association citoyenne qui soutient les Français établis en Thaïlande à travers des actions de solidarité, de culture, d'entraide et d'engagement social.</p>
@@ -74,10 +96,15 @@
         </button>
 
         <button class="btn" onclick="window.open('https://meet.jit.si/fdm-thailande-bureau', '_blank')">📹 Réunion Jitsi</button>
-        <button class="btn" id="addEventBtn" style="background: linear-gradient(45deg, #4CAF50, #388E3C);">📅 Gestion Agenda</button>
+
+        <!-- Bouton agenda -> réservé aux admins -->
+        <button class="btn admin-only" id="addEventBtn" style="background: linear-gradient(45deg, #4CAF50, #388E3C);">📅 Gestion Agenda</button>
+
         <button class="btn" id="openExcelBtn"
-        onclick="window.open('https://docs.google.com/spreadsheets/d/1XqfiaaVe67XIp7ppCm2_ZYJ_-raws_o2-UtF1LF-IBA/edit?usp=sharing', '_blank')">📊 Tâches à Faire </button>
-          </div>
+                onclick="window.open('https://docs.google.com/spreadsheets/d/1XqfiaaVe67XIp7ppCm2_ZYJ_-raws_o2-UtF1LF-IBA/edit?usp=sharing', '_blank')">
+          📊 Tâches à Faire
+        </button>
+      </div>
       <div class="agenda">
         <h3>Agenda des événements internes</h3>
         <div id="calendar"></div>
@@ -97,7 +124,9 @@
     <div id="connectionLogContent">
       <h3>Historique des connexions</h3>
       <ul id="connectionList"></ul>
-      <button onclick="fermerLog()">Fermer</button>
+      <div style="text-align:right;margin-top:10px;">
+        <button class="btn cancelBtn" onclick="fermerLog()">Fermer</button>
+      </div>
     </div>
   </div>
 
@@ -115,15 +144,34 @@
     </div>
   </div>
 
+  <!-- Modal Admin -->
+  <div id="adminModal">
+    <div class="modalContent">
+      <h3>Connexion administrateur</h3>
+      <label>Identifiant (ex: <i>prenom_admin</i>) :
+        <input type="text" id="adminUser" placeholder="ex: jean_admin">
+      </label><br/>
+      <label>Mot de passe :
+        <input type="password" id="adminPass" placeholder="Mot de passe">
+      </label>
+      <div class="modalButtons">
+        <button id="adminLoginBtn">Se connecter</button>
+        <button class="cancelBtn" onclick="fermerAdmin()">Annuler</button>
+      </div>
+      <p style="font-size:0.9em;color:#666;margin-top:8px;">Astuce : l’identifiant doit se terminer par <b>_admin</b>.</p>
+    </div>
+  </div>
+
   <footer>
-    © FDM Thaïlande 2025 – <a href="#" onclick="ouvrirLog()">Historique des connexions</a>
+    © FDM Thaïlande 2025 – <a href="#" id="historyLink" style="display:none;" onclick="ouvrirLog()">Historique des connexions</a>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
     import {
-      getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc
+      getFirestore, collection, addDoc, getDocs, onSnapshot, query, orderBy,
+      deleteDoc, doc, updateDoc, writeBatch
     } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
     // Firebase config
@@ -140,6 +188,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    // ===== ÉTAT DE SESSION =====
+    window.isAdmin = false;
+    let currentUserDisplayName = "";
+
     // --- Fonction d'entrée (login) ---
     window.entrer = async function() {
       const prenom = document.getElementById("prenom").value.trim();
@@ -152,8 +204,8 @@
           nom,
           entree: new Date().toLocaleString(),
           entreeTS: new Date().toISOString(),
-          // ✅ timestamp numérique triable (Bangkok pas nécessaire ici, on affiche plus tard)
-          entreeMillis: Date.now()
+          entreeMillis: Date.now(),
+          role: "user"
         });
       } catch (err) {
         console.error("Erreur ajout login:", err);
@@ -161,55 +213,128 @@
         return;
       }
 
+      currentUserDisplayName = `${prenom} ${nom}`;
       document.getElementById("loginPage").style.display = "none";
       document.getElementById("mainContent").style.display = "block";
+      document.getElementById("adminBadge").style.display = "none";
+      document.getElementById("historyLink").style.display = "none";
+      document.querySelectorAll(".admin-only").forEach(el => el.style.display = "none");
       initCalendar();
     };
 
-    // --- Historique ---
-    // ✅ un seul listener à la fois
+    // ===== ADMIN LOGIN =====
+    window.ouvrirAdmin = () => {
+      document.getElementById("adminModal").classList.add("active");
+      document.getElementById("adminUser").focus();
+    };
+    window.fermerAdmin = () => document.getElementById("adminModal").classList.remove("active");
+
+    document.getElementById("adminLoginBtn").addEventListener("click", async () => {
+      const user = (document.getElementById("adminUser").value || "").trim();
+      const pass = (document.getElementById("adminPass").value || "").trim();
+
+      if (!user || !pass) { alert("Veuillez renseigner identifiant et mot de passe."); return; }
+      if (!user.toLowerCase().endsWith("_admin")) {
+        alert("Identifiant invalide. Utilisez le format prenom_admin");
+        return;
+      }
+      if (pass !== "JeanHugo") {
+        alert("Mot de passe incorrect.");
+        return;
+      }
+
+      window.isAdmin = true;
+      currentUserDisplayName = user;
+
+      try {
+        await addDoc(collection(db, "logins"), {
+          prenom: user.replace(/_admin$/i, ""),
+          nom: "admin",
+          entree: new Date().toLocaleString(),
+          entreeTS: new Date().toISOString(),
+          entreeMillis: Date.now(),
+          role: "admin"
+        });
+      } catch (e) {
+        console.error("Erreur ajout login admin:", e);
+      }
+
+      document.getElementById("adminModal").classList.remove("active");
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("mainContent").style.display = "block";
+      document.getElementById("adminBadge").style.display = "inline-block";
+      document.getElementById("historyLink").style.display = "inline";
+      document.querySelectorAll(".admin-only").forEach(el => el.style.display = "inline-block");
+
+      initCalendar();
+    });
+
+    // --- Historique (avec index pour actions admin) ---
     let unsubscribeLogins = null;
+    window._loginIndex = {}; // { key: [docId, ...] }
 
     window.ouvrirLog = function() {
+      if (!window.isAdmin) { alert("Accès réservé aux administrateurs."); return; }
+
       const list = document.getElementById("connectionList");
       list.innerHTML = "";
 
-      // coupe l'ancien listener si existant
       if (unsubscribeLogins) { unsubscribeLogins(); unsubscribeLogins = null; }
 
-      // Tri par timestamp numérique (documents sans ce champ seront listés mais triés avant)
       const qLogs = query(collection(db, "logins"), orderBy("entreeMillis", "desc"));
 
       unsubscribeLogins = onSnapshot(qLogs, (snapshot) => {
         list.innerHTML = "";
-        const stats = {}; // { key: { lastMillis, lastDisplay } }
+        const stats = {}; // { key: { lastMillis, lastDisplay, displayName } }
+        window._loginIndex = {};
 
         snapshot.forEach(docSnap => {
           const log = docSnap.data();
-          const key = `${(log.prenom||'').toLowerCase()} ${(log.nom||'').toLowerCase()}`;
-          if (!stats[key]) stats[key] = { lastMillis: -1, lastDisplay: "" };
+          const id  = docSnap.id;
+          const key = `${(log.prenom||'').toLowerCase()} ${(log.nom||'').toLowerCase()}`.trim();
+          if (!stats[key]) stats[key] = { lastMillis: -1, lastDisplay: "", displayName: "" };
+          if (!window._loginIndex[key]) window._loginIndex[key] = [];
+          window._loginIndex[key].push(id);
 
-          // Choisit le meilleur temps dispo
           const m =
             (typeof log.entreeMillis === "number" && log.entreeMillis) ||
-            (log.entreeTS ? Date.parse(log.entreeTS) : 0) ||
-            0;
+            (log.entreeTS ? Date.parse(log.entreeTS) : 0) || 0;
 
           if (m > stats[key].lastMillis) {
             stats[key].lastMillis = m;
             const d = new Date(m || Date.now());
+            const displayName = key.split(' ')
+              .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(' ');
+            stats[key].displayName = displayName;
             stats[key].lastDisplay = d.toLocaleString('fr-FR', { timeZone: 'Asia/Bangkok' });
           }
         });
 
-        // Rendu (sans compteur)
-        Object.entries(stats).forEach(([person, info]) => {
-          const displayName = person.split(' ')
-            .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-            .join(' ');
-
+        Object.entries(stats).forEach(([key, info]) => {
           const li = document.createElement("li");
-          li.textContent = `${displayName} – Dernière connexion : ${info.lastDisplay}`;
+
+          const left = document.createElement("div");
+          left.textContent = `${info.displayName} – Dernière connexion : ${info.lastDisplay}`;
+
+          const right = document.createElement("div");
+          if (window.isAdmin) {
+            const renameBtn = document.createElement("button");
+            renameBtn.className = "smallBtn ghost";
+            renameBtn.textContent = "✏️ Renommer…";
+            renameBtn.onclick = () => adminRenamePerson(key, info.displayName);
+
+            const delBtn = document.createElement("button");
+            delBtn.className = "smallBtn danger";
+            delBtn.textContent = "🗑️ Supprimer tous";
+            delBtn.onclick = () => adminDeletePerson(key, info.displayName);
+
+            right.appendChild(renameBtn);
+            right.appendChild(delBtn);
+          }
+
+          li.appendChild(left);
+          li.appendChild(right);
           list.appendChild(li);
         });
       });
@@ -221,6 +346,49 @@
       document.getElementById("connectionLogModal").style.display = "none";
       if (unsubscribeLogins) { unsubscribeLogins(); unsubscribeLogins = null; }
     };
+
+    // === Actions admin sur l'historique ===
+    async function adminDeletePerson(key, displayName) {
+      if (!window.isAdmin) return;
+      const ids = window._loginIndex[key] || [];
+      if (!ids.length) return alert("Aucune entrée à supprimer pour cette personne.");
+
+      if (!confirm(`Supprimer ${ids.length} entrée(s) pour "${displayName}" ?`)) return;
+
+      try {
+        const batch = writeBatch(db);
+        ids.forEach(id => batch.delete(doc(db, "logins", id)));
+        await batch.commit();
+        alert("Entrées supprimées.");
+      } catch (e) {
+        console.error(e);
+        alert("Erreur lors de la suppression (voir console).");
+      }
+    }
+
+    async function adminRenamePerson(key, displayName) {
+      if (!window.isAdmin) return;
+      const ids = window._loginIndex[key] || [];
+      if (!ids.length) return alert("Aucune entrée à renommer pour cette personne.");
+
+      const prenom = prompt(`Nouveau prénom pour "${displayName}" ?`);
+      if (!prenom) return;
+      const nom = prompt(`Nouveau nom pour "${displayName}" ?`);
+      if (!nom) return;
+
+      try {
+        const batch = writeBatch(db);
+        ids.forEach(id => batch.update(doc(db, "logins", id), {
+          prenom: prenom.trim(),
+          nom: nom.trim()
+        }));
+        await batch.commit();
+        alert("Entrées renommées.");
+      } catch (e) {
+        console.error(e);
+        alert("Erreur lors du renommage (voir console).");
+      }
+    }
 
     // --- FullCalendar ---
     let calendar;
@@ -239,8 +407,12 @@
           const events = snapshot.docs.map(d => ({ id: d.id, title: d.data().title, start: d.data().date }));
           successCallback(events);
         },
-        dateClick: info => openEventModal(info.dateStr),
+        dateClick: info => {
+          if (!window.isAdmin) return; // ajout = admin
+          openEventModal(info.dateStr);
+        },
         eventClick: info => {
+          if (!window.isAdmin) return; // edit/suppr = admin
           selectedEvent = { id: info.event.id, title: info.event.title, date: info.event.startStr };
           modal.classList.add("active");
           titleInput.value = info.event.title;
@@ -264,10 +436,14 @@
       selectedEvent = null;
     }
 
-    document.getElementById("addEventBtn").addEventListener("click", () => openEventModal(new Date().toISOString().split('T')[0]));
+    document.getElementById("addEventBtn").addEventListener("click", () => {
+      if (!window.isAdmin) return;
+      openEventModal(new Date().toISOString().split('T')[0]);
+    });
     document.getElementById("cancelBtn").addEventListener("click", () => modal.classList.remove("active"));
 
     document.getElementById("saveBtn").addEventListener("click", async () => {
+      if (!window.isAdmin) { alert("Action réservée aux administrateurs."); return; }
       const title = titleInput.value.trim();
       const date = dateInput.value;
       if (!title || !date) return alert("Veuillez remplir titre et date");
@@ -286,6 +462,7 @@
     });
 
     document.getElementById("deleteBtn").addEventListener("click", async () => {
+      if (!window.isAdmin) { alert("Action réservée aux administrateurs."); return; }
       if (selectedEvent && selectedEvent.id) {
         try {
           await deleteDoc(doc(db, "events", selectedEvent.id));
@@ -364,7 +541,3 @@
   </script>
 </body>
 </html>
-
-
-
-
