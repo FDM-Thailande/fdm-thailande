@@ -397,36 +397,87 @@
     const titleInput = document.getElementById("eventTitle");
     const dateInput = document.getElementById("eventDate");
 
-    function initCalendar() {
-      const calendarEl = document.getElementById('calendar');
-      calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        locale: 'fr',
-        events: async (fetchInfo, successCallback) => {
-          const snapshot = await getDocs(collection(db, "events"));
-          const events = snapshot.docs.map(d => ({ id: d.id, title: d.data().title, start: d.data().date }));
-          successCallback(events);
-        },
-        dateClick: info => {
-          if (!window.isAdmin) return; // ajout = admin
-          openEventModal(info.dateStr);
-        },
-        eventClick: info => {
-          if (!window.isAdmin) return; // edit/suppr = admin
-          selectedEvent = { id: info.event.id, title: info.event.title, date: info.event.startStr };
-          modal.classList.add("active");
-          titleInput.value = info.event.title;
-          dateInput.value = info.event.startStr;
-        }
-      });
-      calendar.render();
+   function initCalendar() {
+  const calendarEl = document.getElementById('calendar');
 
-      onSnapshot(collection(db, "events"), (snapshot) => {
-        const events = snapshot.docs.map(d => ({ id: d.id, title: d.data().title, start: d.data().date }));
-        calendar.removeAllEvents();
-        calendar.addEventSource(events);
-      });
-    }
+  // gestion clic simple / double clic
+  let lastClickDate = null;
+  let clickTimeout = null;
+
+  calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    locale: 'fr',
+
+    // ✅ barre d’outils pour revenir en vue Mois
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,dayGridDay'
+    },
+    buttonText: {
+      today: "Aujourd’hui",
+      month: "Mois",
+      day: "Jour"
+    },
+
+    events: async (fetchInfo, successCallback) => {
+      const snapshot = await getDocs(collection(db, "events"));
+      const events = snapshot.docs.map(d => ({
+        id: d.id,
+        title: d.data().title,
+        start: d.data().date
+      }));
+      successCallback(events);
+    },
+
+    // 👇 Simple clic => vue Jour ; Double clic => modale (si admin)
+    dateClick: info => {
+      const now = Date.now();
+      if (lastClickDate && now - lastClickDate < 300) {
+        clearTimeout(clickTimeout);
+        lastClickDate = null;
+        if (window.isAdmin) openEventModal(info.dateStr);
+      } else {
+        lastClickDate = now;
+        clickTimeout = setTimeout(() => {
+          calendar.changeView('dayGridDay', info.dateStr);
+        }, 300);
+      }
+    },
+
+eventClick: info => {
+  // 👇 si non admin : ouvre la vue journalière du jour cliqué
+  if (!window.isAdmin) {
+    const clickedDate = info.event.startStr;
+    calendar.changeView('dayGridDay', clickedDate);
+    return;
+  }
+
+  // 👇 si admin : comportement normal (édition)
+  selectedEvent = {
+    id: info.event.id,
+    title: info.event.title,
+    date: info.event.startStr
+  };
+  modal.classList.add("active");
+  titleInput.value = info.event.title;
+  dateInput.value = info.event.startStr;
+}
+
+  });
+
+  calendar.render();
+
+  onSnapshot(collection(db, "events"), (snapshot) => {
+    const events = snapshot.docs.map(d => ({
+      id: d.id,
+      title: d.data().title,
+      start: d.data().date
+    }));
+    calendar.removeAllEvents();
+    calendar.addEventSource(events);
+  });
+}
 
     // Modal événement
     function openEventModal(dateStr) {
